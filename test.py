@@ -15,6 +15,7 @@ cv2.imshow("Otsu", img_thresh)
 # Two pass connected componet
 src_img = np.copy(img_thresh)
 src_img = cv2.resize(src_img, dsize=None, fx=0.1, fy=0.1)
+# TODO: extremely computational expense
 # img_cc = iseg.TwoPassCComp(src_img)
 tmp = np.array([[0,0,1,0,0,1,0],
           [1,1,1,0,1,1,1],
