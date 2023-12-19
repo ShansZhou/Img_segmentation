@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-
+from time import time
 
 # Otsu thresholding, auto thresholding img
 def OtsuThreshold(img):
@@ -54,7 +54,7 @@ def TwoPassCComp(img):
     label_mask = np.zeros(np.shape(img), np.uint16)
 
     label = 1
-    equalLabels_list = []
+    equalLabels_list = {}
     # 4-Neighbors
     directs = [[0,-1],[0,+1],[1,0],[-1,0]]
 
@@ -62,10 +62,10 @@ def TwoPassCComp(img):
     for col in range(cols):
         for row in range(rows):
             if img[col, row] == 0: continue
-            currLabel_list = []
+            currLabel_list = [[col,row]]
             isNewLabel = True
             min_label = label
-
+            neighbors = []
             # iterate 4 neighbors (actually, 2 neighbors are only needed)
             for [offX, offY] in directs:
                 if col+offX < 0 or col+offX >=cols or row+offY <0 or row+offY>= rows: continue
@@ -74,7 +74,8 @@ def TwoPassCComp(img):
                 if neig_label > 0:
                     
                     # add neighbor to Set
-                    currLabel_list.append(neig_label)
+                    currLabel_list += equalLabels_list[neig_label]
+                    neighbors += [neig_label]
 
                     isNewLabel = False
                     # assign minimun label
@@ -85,43 +86,85 @@ def TwoPassCComp(img):
 
             if isNewLabel:
                 label+=1
-                currLabel_list.append(min_label)
             
-            equalLabels_list.append(currLabel_list)
+            equalLabels_list[min_label] = currLabel_list
+            
+            for ellist in neighbors:
+                if ellist == min_label: continue
+                equalLabels_list.pop(ellist)
                 
-    # remove duplicate pairs
-    list_result =[]
-    for baselist in equalLabels_list:
-        b_set = set(baselist)
-        if len(b_set) ==0: continue
-        isfound = True
-        while isfound:
-            isfound = False
-            for idx in range(len(equalLabels_list)):
-                tar_set = set(equalLabels_list[idx])
-                if len(tar_set) ==0: continue
-                if b_set.isdisjoint(tar_set) == False:
-                    b_set.update(tar_set)
-                    equalLabels_list[idx] = []
-                    isfound = True
-                    break
-
-                 
-        list_result.append(list(b_set))         
+    
 
     # Two Pass
-    for col in range(cols):
-        for row in range(rows):
-            if label_mask[col, row] == 0: continue
-
-            for equalLabel in list_result:
-                if  label_mask[col, row] in equalLabel:
-                    label_mask[col, row] = min(equalLabel)
+    for (k, var) in equalLabels_list.items():
+        
+        for [col, row] in var:
+            label_mask[col,row] =  k
     
     return label_mask
 
-            
-            
+# K-means
+# input is a Binary Img
+def Kmeans(img, k=5):
+    
+    cols, rows = np.shape(img)
+    centers_x = np.random.randint(0, cols, size=(k,1))
+    centers_y = np.random.randint(0, rows, size=(k,1))
+    centers = np.column_stack((centers_x, centers_y))
+    
+    label_mask = np.zeros((cols,rows), np.uint8)
+    isConverged = False
+    count = 0
+    
+    del_mean = np.mean(centers)
+    while not isConverged:
+        start_t = time()
+        # iterate each valued points and classify it to a label
+        for col in range(cols):
+            for row in range(rows):
+                if img[col, row] == 0: continue
+
+                min_idx = 0
+                min_dist = np.sqrt((cols)**2+(rows)**2)
+                # for current pixel, cal the distance to each centers, and find the closest center
+                for cls_id, [cx, cy] in enumerate(centers):
+                    dist = np.sqrt((cx-col)**2+(cy-row)**2)
+                    if min_dist > dist:
+                        min_dist = dist
+                        min_idx = cls_id+1
+
+                # assign class label to current pixel        
+                label_mask[col, row] = min_idx
+
+        # re-calculate the centers based on the labels
+        for cls_id in range(k):
+            cls_id +=1
+            c_acc, r_acc = 0,0
+            locations = np.argwhere(label_mask == cls_id)
+            for [col, row] in locations:
+                c_acc+= col
+                r_acc+= row
+            if len(locations) ==0:
+                c_mean =0
+                r_mean =0
+            else:
+                c_mean = c_acc/ len(locations)
+                r_mean = r_acc/ len(locations)
+
+            centers[cls_id-1,:] = [c_mean, r_mean]
+        
+        count+=1
+        end_t = time()
+        curr_mean = np.mean(centers)
+        print("processed %d times, elapsed time: %.3f" % (count, end_t - start_t))
+        del_mean = np.abs(np.abs(del_mean) - np.abs(curr_mean))
+        print("delta mean %.3f" % (del_mean))
+        if del_mean < 1.0 : isConverged=True
+
+        del_mean = curr_mean
+
+
+    return label_mask
 
 
             
