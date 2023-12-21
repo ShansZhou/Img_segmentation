@@ -105,7 +105,7 @@ def TwoPassCComp(img):
 
 # K-means
 # input is a Binary Img
-def Kmeans(img, k=5):
+def Kmeans_XY(img, k=5):
     
     cols, rows = np.shape(img)
     centers_x = np.random.randint(0, cols, size=(k,1))
@@ -159,19 +159,64 @@ def Kmeans(img, k=5):
         print("processed %d times, elapsed time: %.3f" % (count, end_t - start_t))
         del_mean = np.abs(np.abs(del_mean) - np.abs(curr_mean))
         print("delta mean %.3f" % (del_mean))
-        if del_mean < 1.0 : isConverged=True
+        # if del_mean < 1.0 : isConverged=True
 
         del_mean = curr_mean
 
 
     return label_mask
 
+# input is a Gray Img
+def Kmeans_inten(img, k=5):
 
-            
+    cols, rows = np.shape(img)
+    centers = np.random.rand(k,1)*255
 
+
+    isConverged = False
+    count = 0
+    label_mask = np.zeros((cols,rows), np.uint8)
+    del_mean = np.mean(centers)
+    while not isConverged:
+        start_t = time()
         
+        for row in range(rows):
+            for col in range(cols):
+                curr_pixel = img[col, row]
+
+                min_dist = 256
+                min_labelId = 1
+                for labelId, c_inten in enumerate(centers):
+                    dist = np.sqrt((curr_pixel-c_inten[0])**2)
+                    if dist < min_dist:
+                        min_labelId = labelId+1
+                        min_dist = dist
                 
-                    
+                label_mask[col, row] = min_labelId
+        
+        for labelId in range(1, len(centers)+1):
+            locations = np.argwhere(label_mask == labelId)
+            inten_acc = 0.0
+            for [col, row] in locations:
+                    inten_acc += img[col, row]
+
+            if len(locations) ==0:
+                inten_acc =0
+            else:
+                inten_acc /= len(locations)
+            centers[labelId-1] = inten_acc
+        
+        count+=1
+        end_t = time()
+        curr_mean = np.mean(centers)
+        print("processed %d times, elapsed time: %.3f" % (count, end_t - start_t))
+        del_mean = np.abs(np.abs(del_mean) - np.abs(curr_mean))
+        print("delta mean %.4f" % (del_mean))
+        if del_mean < 0.01 : isConverged=True
+
+        del_mean = curr_mean
+
+    return label_mask              
 
 
 

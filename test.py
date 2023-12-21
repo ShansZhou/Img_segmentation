@@ -28,17 +28,20 @@ img_thresh = iseg.OtsuThreshold(src_img)
 # cv2.imshow("TwoPass", img_cc)
 
 
-# K-means
-src_img = np.copy(img_thresh)
+# # K-means
+# src_img = np.copy(img_thresh)
+# src_img = cv2.resize(src_img, dsize=None, fx=0.3, fy=0.3)
+# # src_img = np.array([[0,0,1,0,0,1,0],
+# #                 [1,1,1,0,1,1,1],
+# #                 [0,0,1,0,0,1,0],
+# #                 [0,1,1,0,1,1,0]])
+# img_kmeans = iseg.Kmeans_XY(src_img, k=25)
+# img_kmeans = np.uint8(img_kmeans)*(255/5)
+# cv2.imshow("KMeans", img_kmeans)
+
+# K-means indensity
+src_img = np.copy(img)
 src_img = cv2.resize(src_img, dsize=None, fx=0.3, fy=0.3)
-# src_img = np.array([[0,0,1,0,0,1,0],
-#                 [1,1,1,0,1,1,1],
-#                 [0,0,1,0,0,1,0],
-#                 [0,1,1,0,1,1,0]])
-img_kmeans = iseg.Kmeans(src_img, k=5)
-img_kmeans = np.uint8(img_kmeans)*(255/5)
-cv2.imshow("KMeans", img_kmeans)
-
-
+img_kmeans = iseg.Kmeans_inten(src_img, k=5)
 
 cv2.waitKey(0)
